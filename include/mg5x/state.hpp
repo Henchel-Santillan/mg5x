@@ -3,7 +3,7 @@
 namespace mg5x {
 
 struct State {
-    
+
 };
 
 }
