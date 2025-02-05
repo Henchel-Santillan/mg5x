@@ -23,3 +23,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
+
+add_subdirectory(gsl)
