@@ -1,56 +1,25 @@
 #include "image_capture_node.hpp"
-
-#include <array>
-#include <chrono>
-#include <cstdlib>
-#include <filesystem>
-#include <format>
-#include <limits>
-#include <random>
+#include "session.hpp"
 
 namespace mg5x {
 
-image_capture_node::image_capture_node()
-    : rclcpp::Node(NODE_NAME),
-      session_directory(""),
-      counter(0)
+image_capture_node::image_capture_node(session_handler &handler)
+    : handler(handler),
+      image_cap_sub(this->create_subscription(manual_controls_topic, 
+        qos_history_depth, std::bind(&image_capture_node::capture_image_callback, this, std::placeholders::_1)))
 {
-    mission_sub = this->create_subscription<>();
-    waypoint_sub = this->create_subscription<>();
 }
 
-void image_capture_node::mission_start_callback() {
-    // Generate (pseudo)-random 16-bit signed integers for session ID
-    std::random_device rd;
-    std::array<int, std::mt19937::state_size> seed_data{};
-    std::generate(seed_data.begin(), seed_data.end(), std::ref(rd));
-    std::seed_seq seq(seed_data.begin(), seed_data.end());
-    std::mt19937 generator;
-    std::uniform_int_distribution dist{std::numeric_limits<short>::min(),
-                                       std::numeric_limits<short>::max()};
+void image_capture_node::capture_image_callback() {
+    const auto session_info = handler.current_session_info();
+    const auto new_image_name = fmt::format("Image{}.jpg", session_info.counter);
+    handler.bump();
 
-    const auto nonce = static_cast<short>(dist(generator));
-
-    using system_clock = std::chrono::system_clock;
-    const auto now = system_clock::now();
-    const auto time_point = system_clock::to_time_t(system_clock::now());
-
-    auto dir_name = std::format("{}_{}", std::to_string(nonce), std::ctime(&time_point));
-    std::replace_if(dir_name.begin(), dir_name.end(), ::isspace, '_');
-
-    using filesystem = std::filesystem;
-    auto path = filesystem::path{std::getenv("HOME")} / "images" / dir_name;
-    if (!filesystem::exists(path) && filesystem::create_directories(path)) {
-        // This is the directory where images will be saved for the current session
-        session_directory = path.string();
-        counter = 0;    // Reset the counter
-    }
-}
-
-void image_capture_node::waypoint_callback() {
-    // Use libcamera to capture an image
-    std::system(std::format("rpicam-still -o {}/image{}.jpg", session_directory, counter));
-    counter++;
+    std::thread([&](const filesystem::path &path, const std::string &image_name) {
+        const auto image_path = path / image_name;
+        const auto command = fmt::format("rpicam-still -o {}", image_path);
+        std::system(command);   // TODO: Add error handling
+    }, session_info.path, new_image_name).detach();
 }
 
 }

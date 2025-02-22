@@ -1,24 +1,24 @@
 #pragma once
 
 #include <rclcpp/rclcpp.h>
-#include <string>
+#include <std_msgs/msg/string.hpp>  // TODO: Remove
 
 namespace mg5x {
 
+class session_handler;
+
 class image_capture_node : public rclcpp::Node {
 public:
-    image_capture_node();
+    image_capture_node(session_handler &handler);
 
 private:
-    void mission_start_callback();
-    void waypoint_callback();
+    static constexpr auto qos_history_depth = 10U;
+    static constexpr auto manual_controls_topic = "test_topic"; // TODO: replace with actual topic
 
-    static constexpr auto NODE_NAME = "image_capture_node";
-    
-    rclcpp::Subscription<> mission_sub;     // Trigger for button assignment
-    rclcpp::Subscription<> waypoint_sub;    // Waypoint reached
-    std::string session_directory;
-    int counter;
+    void capture_image_callback();
+
+    session_handler &handler;
+    rclcpp:Subscription<std_msgs::msg::String>::SharedPtr image_cap_sub; // TODO: Change to actual subscription
 };
 
 }
