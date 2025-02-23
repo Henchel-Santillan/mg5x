@@ -9,12 +9,10 @@ namespace filesystem = std::filesystem;
 
 struct session_info {
     session_info() {}
-    session_info(const std::size_t id, const std::size_t counter, const filesystem::path &path)
-        : id(id),
-          counter(counter),
+    session_info(const std::size_t counter, const filesystem::path &path)
+        : counter(counter),
           path(path) {}
 
-    std::size_t id;
     std::size_t counter;
     filesystem::path path;
 };
