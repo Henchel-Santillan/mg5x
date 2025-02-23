@@ -41,7 +41,7 @@ void image_capture_node::capture_image_callback(const std_msgs::msg::String &mes
 
 #else
 void image_capture_node::capture_image_callback(const px4_msgs::msg::VehicleCommand::UniquePtr &message) {
-    if (message->command == VehicleCommand::VEHICLE_CMD_IMAGE_START_CAPTURE) {
+    if (message->command == px4_msgs::msg::VehicleCommand::VEHICLE_CMD_IMAGE_START_CAPTURE) {
         const auto session_info = handler.current_session_info();
         const auto new_image_name = fmt::format("Image{}.txt", session_info.counter);
         handler.bump();
