@@ -2,18 +2,19 @@
 
 #include <array>
 #include <chrono>
-#include <filesystem>
+#include <iostream>
 #include <limits>
 #include <random>
 
 #include <fmt/chrono.h>
+#include <fmt/format.h>
 
 namespace mg5x {
 
 // Pass filesystem::path(std::getenv("HOME")) / "images" as the base_dir
 
 session_handler::session_handler(const filesystem::path &root)
-    : counter(0U),
+    : base_dir(),
       current_session()
 {
     // Generate time-stamped directory
@@ -22,13 +23,14 @@ session_handler::session_handler(const filesystem::path &root)
     base_dir = root / dir_name;
 
     try {
-        if (!filesystem::exists(path)) {
-            filesystem::create_directories(path);
-            filesystem::permissions(path, filesystem::perms::owner_all);
+        if (!filesystem::exists(base_dir)) {
+            filesystem::create_directories(base_dir);
+            filesystem::permissions(base_dir, filesystem::perms::owner_all);
         }
     } catch (const filesystem::filesystem_error &error) {
         const auto code = error.code();
-        fmt::print("[{}: ({})]: {}", code.category(), code.value(), code.message());
+        auto error_string = fmt::format("Error {}: {}\n", code.value(), error.what());
+        std::cerr << error_string << std::endl;
     }
 }
 

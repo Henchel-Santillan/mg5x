@@ -31,4 +31,10 @@
 *.out
 *.app
 
+# Editor
 .vscode/
+
+# Colcon
+build/
+install/
+log/

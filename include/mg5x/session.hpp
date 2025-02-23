@@ -5,10 +5,10 @@
 
 namespace mg5x {
 
-using filesystem = std::filesystem;
+namespace filesystem = std::filesystem;
 
 struct session_info {
-    session_info();
+    session_info() {}
     session_info(const std::size_t id, const std::size_t counter, const filesystem::path &path)
         : id(id),
           counter(counter),

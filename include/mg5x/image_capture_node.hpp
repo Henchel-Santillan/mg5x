@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rclcpp/rclcpp.h>
+#include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>  // TODO: Remove
 
 namespace mg5x {
@@ -15,10 +15,10 @@ private:
     static constexpr auto qos_history_depth = 10U;
     static constexpr auto manual_controls_topic = "test_topic"; // TODO: replace with actual topic
 
-    void capture_image_callback();
+    void capture_image_callback(const std_msgs::msg::String &message);
 
     session_handler &handler;
-    rclcpp:Subscription<std_msgs::msg::String>::SharedPtr image_cap_sub; // TODO: Change to actual subscription
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr image_cap_sub; // TODO: Change to actual subscription
 };
 
 }
