@@ -61,7 +61,7 @@ bool session_handler::new_session() {
     return true;
 }
 
-void session_handler::bump() {
+void session_handler::bump_session_counter() {
     current_session.counter++;
 }
 

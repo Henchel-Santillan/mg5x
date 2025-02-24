@@ -16,7 +16,7 @@ image_capture_node::image_capture_node(session_handler &handler)
 #else
     rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
     auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
-    vehicle_cmd_sub = this->create_subscription<px4_msgs::msg::VehicleCommand>("/fmu/in/vehicle_command", 
+    manual_control_sub = this->create_subscription<ManualControlSetpoint>("/fmu/out/manual_control_setpoint", 
         qos, std::bind(&image_capture_node::capture_image_callback, this, std::placeholders::_1));
 #endif
 }
@@ -24,40 +24,47 @@ image_capture_node::image_capture_node(session_handler &handler)
 #ifdef CAPTURE_TESTING
 void image_capture_node::capture_image_callback(const std_msgs::msg::String &message) {
     (void) message;
-    const auto session_info = handler.current_session_info();
-    //const auto new_image_name = fmt::format("Image{}.jpg", session_info.counter);
-    const auto test_file = fmt::format("Image{}.txt", session_info.counter);
-    handler.bump();
+    spawn_and_detach_imcap_thread();
+    // const auto session_info = handler.current_session_info();
+    // const auto new_image_name = fmt::format("Image{}.jpg", session_info.counter);
+    // //const auto test_file = fmt::format("Image{}.txt", session_info.counter);
+    // handler.bump_session_counter();
 
-    auto image_capture_thread = std::thread([&test_file/*&new_image_name*/](const filesystem::path &path) {
-        const auto image_path = path / test_file /*new_image_name*/; 
-        //const auto command = fmt::format("rpicam-still -o {}", image_path.string());
-        const auto command = fmt::format("touch {}.txt", image_path.string());
-        std::system(command.c_str());   // TODO: Add error handling
-    }, session_info.path);   // TODO: change back to new_image_name
+    // auto image_capture_thread = std::thread([/*&test_file*/&new_image_name](const filesystem::path &path) {
+    //     const auto image_path = path / /*test_file*/ new_image_name;
 
-    image_capture_thread.detach();
+    //     // No preview, timeout is 3 ms
+    //     const auto command = fmt::format(rpicam_still_fmt_str, image_path.string());
+    //     //const auto command = fmt::format("touch {}.txt", image_path.string());
+    //     std::system(command.c_str());   // TODO: Add error handling
+    // }, session_info.path);   // TODO: change back to new_image_name
+
+    // image_capture_thread.detach();
 }
-
 #else
-void image_capture_node::capture_image_callback(const px4_msgs::msg::VehicleCommand::UniquePtr &message) {
-    if (message->command == px4_msgs::msg::VehicleCommand::VEHICLE_CMD_IMAGE_START_CAPTURE) {
-        const auto session_info = handler.current_session_info();
-        const auto new_image_name = fmt::format("Image{}.txt", session_info.counter);
-        handler.bump();
-
-        auto image_capture_thread = std::thread([&new_image_name](const filesystem::path &path) {
-            const auto image_path = path / new_image_name;
-            const auto command = fmt::format("rpicam-still -o {}", image_path.string());
-            std::system(command.c_str());
-        }, session_info.path);
-
-        // Allow the thread to run independently
-        image_capture_thread.detach();
+void image_capture_node::capture_image_callback(const ManualControlSetpoint::UniquePtr &message) {
+    const auto buttons = message->buttons;
+    if (buttons == camera_capture_button) {
+        spawn_and_detach_imcap_thread();
     }
 }
-
 #endif
+
+// PRIVATE
+void image_capture_node::spawn_and_detach_imcap_thread() {
+    const auto info = handler.current_session_info();
+    const auto new_image_name = fmt::format("Image{}.jpg", info.counter);
+    handler.bump_session_counter();
+
+    auto image_capture_thread = std::thread([&new_image_name](const filesystem::path &path) {
+        const auto image_path = path / new_image_name;
+        const auto command = fmt::format("rpicam-still -o {} -n -t 3", image_path.string());
+        std::system(command.c_str());
+    }, info.path);
+
+    // Allow the thread to run independently
+    image_capture_thread.detach();
+}
 
 
 }
