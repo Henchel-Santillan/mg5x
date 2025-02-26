@@ -21,7 +21,7 @@ public:
 private:
     static constexpr auto node_name = "image_capture_node";
     static constexpr auto qos_history_depth = 10U;
-    static constexpr auto camera_capture_button = 10U;
+    static constexpr auto camera_capture_button = 10U;  // maps to RB button on Xbox Series X Controller
 
     void spawn_and_detach_imcap_thread();
 
