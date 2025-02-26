@@ -4,11 +4,16 @@
 #include <thread>
 #include <fmt/format.h>
 
+extern "C" {
+#include <errno.h>
+}
+
 namespace mg5x {
 
 image_capture_node::image_capture_node(session_handler &handler)
     : rclcpp::Node(node_name),
-      handler(handler)
+      handler(handler),
+      capturing{false}
 {
 #ifdef CAPTURE_TESTING
     image_cap_sub = this->create_subscription<std_msgs::msg::String>("test_topic", 
@@ -52,18 +57,24 @@ void image_capture_node::capture_image_callback(const ManualControlSetpoint::Uni
 
 // PRIVATE
 void image_capture_node::spawn_and_detach_imcap_thread() {
-    const auto info = handler.current_session_info();
-    const auto new_image_name = fmt::format("Image{}.jpg", info.counter);
-    handler.bump_session_counter();
-
-    auto image_capture_thread = std::thread([&new_image_name](const filesystem::path &path) {
-        const auto image_path = path / new_image_name;
-        const auto command = fmt::format("rpicam-still -o {} -n -t 3", image_path.string());
-        std::system(command.c_str());
-    }, info.path);
-
-    // Allow the thread to run independently
-    image_capture_thread.detach();
+    if (!capturing.exchange(true)) {
+        const auto info = handler.current_session_info();
+        const auto new_image_name = fmt::format("Image{}.jpg", info.counter);
+        handler.bump_session_counter();
+    
+        auto image_capture_thread = std::thread([this, new_image_name](const filesystem::path &path) {
+            const auto image_path = path / new_image_name;
+            const auto command = fmt::format("rpicam-still -o {} -n -t 3", image_path.string());    // TODO: replace with a loadable tuning file
+            auto result = std::system(command.c_str());
+            if (result != 0) {
+                std::cerr << strerror(result) << std::endl;
+            }
+            capturing.store(false);
+        }, info.path);
+    
+        // Allow the thread to run independently
+        image_capture_thread.detach();
+    }
 }
 
 

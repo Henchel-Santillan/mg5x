@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <rclcpp/rclcpp.hpp>
 
 #ifdef CAPTURE_TESTING
@@ -16,7 +17,7 @@ class session_handler;
 
 class image_capture_node : public rclcpp::Node {
 public:
-    image_capture_node(session_handler &handler);
+    explicit image_capture_node(session_handler &handler);
 
 private:
     static constexpr auto node_name = "image_capture_node";
@@ -26,6 +27,7 @@ private:
     void spawn_and_detach_imcap_thread();
 
     session_handler &handler;
+    std::atomic<bool> capturing;
 
 #ifdef CAPTURE_TESTING
     void capture_image_callback(const std_msgs::msg::String &message);
