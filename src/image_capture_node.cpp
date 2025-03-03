@@ -22,6 +22,8 @@ image_capture_node::image_capture_node(session_handler &handler, const path &tun
 #else
     rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
     auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+
+    RCLCPP_INFO(this->get_logger(), "Creating subscription to topic /fmu/out/manual_control_setpoint");
     manual_control_sub = this->create_subscription<ManualControlSetpoint>("/fmu/out/manual_control_setpoint", 
         qos, std::bind(&image_capture_node::capture_image_callback, this, std::placeholders::_1));
 #endif
@@ -34,8 +36,11 @@ void image_capture_node::capture_image_callback(const std_msgs::msg::String &mes
 }
 #else
 void image_capture_node::capture_image_callback(const ManualControlSetpoint::UniquePtr &message) {
-    const auto buttons = message->buttons;
-    if (buttons == camera_capture_button) {
+    const auto buttons = message->buttons; 
+
+    // Note: 1024 is 2^10
+    if ((buttons & 1024) != 0) {
+        RCLCPP_INFO(this->get_logger(), "RB Button pressed, trying image capture...");
         spawn_and_detach_imcap_thread();
     }
 }
@@ -48,6 +53,8 @@ void image_capture_node::spawn_and_detach_imcap_thread() {
         const auto new_image_name = fmt::format("Image{}.jpg", info.counter);
         handler.bump_session_counter();
     
+	RCLCPP_INFO(this->get_logger(), "Starting image capture...");
+
         auto image_capture_thread = std::thread([this, new_image_name](const filesystem::path &path) {
             const auto image_path = path / new_image_name;
             const auto command = fmt::format("rpicam-still -o {} -n -t 3 --tuning-file {}", image_path.string(),
