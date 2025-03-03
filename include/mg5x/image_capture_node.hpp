@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <filesystem>
 #include <rclcpp/rclcpp.hpp>
 
 #ifdef CAPTURE_TESTING
@@ -16,8 +17,9 @@ namespace mg5x {
 class session_handler;
 
 class image_capture_node : public rclcpp::Node {
+    using path = std::filesystem::path;
 public:
-    explicit image_capture_node(session_handler &handler);
+    image_capture_node(session_handler &handler, const path &tuning_file_path);
 
 private:
     static constexpr auto node_name = "image_capture_node";
@@ -27,6 +29,7 @@ private:
     void spawn_and_detach_imcap_thread();
 
     session_handler &handler;
+    path tuning_file_path;
     std::atomic<bool> capturing;
 
 #ifdef CAPTURE_TESTING
