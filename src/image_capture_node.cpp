@@ -84,7 +84,7 @@ void image_capture_node::upload_image_to_api(const filesystem::path &image_path)
     curl = curl_easy_init();
 
     if(curl) {
-        std::string url = "http://example.com/upload"; // Replace with your server URL
+        std::string url = "https://5ac5-2620-101-f000-7c0-00-1592.ngrok-free.app"; // Replace with your server URL
         std::string filePath = image_path.string(); // Use the captured image path
 
         struct curl_httppost *formpost=NULL;
