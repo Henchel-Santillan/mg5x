@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <fmt/format.h>
+#include <curl/curl.h>
 
 extern "C" {
 #include <errno.h>
@@ -53,7 +54,7 @@ void image_capture_node::spawn_and_detach_imcap_thread() {
         const auto new_image_name = fmt::format("Image{}.jpg", info.counter);
         handler.bump_session_counter();
     
-	RCLCPP_INFO(this->get_logger(), "Starting image capture...");
+        RCLCPP_INFO(this->get_logger(), "Starting image capture...");
 
         auto image_capture_thread = std::thread([this, new_image_name](const filesystem::path &path) {
             const auto image_path = path / new_image_name;
@@ -63,6 +64,10 @@ void image_capture_node::spawn_and_detach_imcap_thread() {
             if (result != 0) {
                 std::cerr << strerror(result) << std::endl;
             }
+
+            // Upload the image to the API
+            upload_image_to_api(image_path);
+
             capturing.store(false);
         }, info.path);
 
@@ -71,4 +76,48 @@ void image_capture_node::spawn_and_detach_imcap_thread() {
     }
 }
 
+void image_capture_node::upload_image_to_api(const filesystem::path &image_path) {
+    CURL *curl;
+    CURLcode res;
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+
+    if(curl) {
+        std::string url = "http://example.com/upload"; // Replace with your server URL
+        std::string filePath = image_path.string(); // Use the captured image path
+
+        struct curl_httppost *formpost=NULL;
+        struct curl_httppost *lastptr=NULL;
+        struct curl_slist *headerlist=NULL;
+        static const char buf[] = "Expect:";
+
+        curl_formadd(&formpost,
+                     &lastptr,
+                     CURLFORM_COPYNAME, "imagefile",
+                     CURLFORM_FILE, filePath.c_str(),
+                     CURLFORM_END);
+
+        headerlist = curl_slist_append(headerlist, buf);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+
+        res = curl_easy_perform(curl);
+
+        if(res != CURLE_OK) {
+            std::cerr << "cURL error: " << curl_easy_strerror(res) << std::endl;
+        } else {
+            RCLCPP_INFO(this->get_logger(), "Image uploaded successfully.");
+        }
+
+        curl_easy_cleanup(curl);
+        curl_formfree(formpost);
+        curl_slist_free_all(headerlist);
+    }
+
+    curl_global_cleanup();
 }
+
+} // namespace mg5x
