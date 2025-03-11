@@ -27,6 +27,7 @@ private:
     static constexpr auto camera_capture_button = 10U;  // maps to RB button on Xbox Series X Controller
 
     void spawn_and_detach_imcap_thread();
+    void upload_image_to_api(const path &image_path);
 
     session_handler &handler;
     path tuning_file_path;

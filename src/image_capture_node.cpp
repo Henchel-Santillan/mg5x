@@ -76,7 +76,7 @@ void image_capture_node::spawn_and_detach_imcap_thread() {
     }
 }
 
-void image_capture_node::upload_image_to_api(const filesystem::path &image_path) {
+void image_capture_node::upload_image_to_api(const path &image_path) {
     CURL *curl;
     CURLcode res;
 
